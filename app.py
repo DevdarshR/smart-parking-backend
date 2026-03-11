@@ -24,7 +24,22 @@ def update_data():
     global parking_data
     parking_data = request.json
     return {"message": "data updated"}
+parking_data = {
+    "distance1": 0,
+    "distance2": 0,
+    "status1": "FREE",
+    "status2": "FREE"
+}
 
+@app.route("/update", methods=["POST"])
+def update_data():
+    global parking_data
+    parking_data = request.json
+    return {"message": "updated"}
+
+@app.route("/data")
+def get_data():
+    return jsonify(parking_data)
 # dashboard reads parking data
 @app.route("/data")
 def get_data():
@@ -53,3 +68,4 @@ def get_prediction():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
