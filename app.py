@@ -9,6 +9,7 @@ CORS(app)
 # Load ML model
 model = joblib.load("parking_model.pkl")
 reservations = []
+expired_reservations = []
 # store latest parking data from ESP32
 parking_data = {
     "distance1": 0,
@@ -21,31 +22,75 @@ def reserve_slot():
 
     data = request.json
 
+    slot = int(data["slot"])
+    start = data["start"]
+    end = data["end"]
+
+    # check double booking
+
+    for r in reservations:
+
+        if r["slot"] == slot and r["start"] == start:
+
+            return {
+                "message":"Slot already reserved for this time"
+            },400
+
     reservation = {
-        "slot": data["slot"],
-        "start": data["start"],
-        "end": data["end"],
-        "price": data["price"]
+
+        "slot": slot,
+        "start": start,
+        "end": end,
+        "price": 20,
+        "status": "ACTIVE"
+
     }
 
     reservations.append(reservation)
 
-    return {"message":"slot reserved"}
+    return {"message":"Reservation successful"}
 
 def remove_expired_reservations():
 
+    global reservations
+    global expired_reservations
+
     now = datetime.now().strftime("%H:%M")
 
-    global reservations
+    active = []
 
-    reservations = [
-        r for r in reservations
-        if r["end"] > now
-    ]
+    for r in reservations:
+
+        if r["end"] <= now:
+
+            r["status"] = "EXPIRED"
+
+            expired_reservations.append(
+                f"Reservation for Slot {r['slot']} expired"
+            )
+
+        else:
+
+            active.append(r)
+
+    reservations = active
+
+@app.route("/expired")
+def get_expired():
+
+    global expired_reservations
+
+    messages = expired_reservations
+
+    expired_reservations = []
+
+    return jsonify(messages)
 
 @app.route("/reservations")
 def get_reservations():
+
     remove_expired_reservations()
+
     return jsonify(reservations)
 
 # ESP32 sends data here
