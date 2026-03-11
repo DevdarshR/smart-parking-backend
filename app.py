@@ -66,15 +66,6 @@ parking_data = {
     "status2": "FREE"
 }
 
-@app.route("/update", methods=["POST"])
-def update_data():
-    global parking_data
-    parking_data = request.json
-    return {"message": "updated"}
-
-@app.route("/data")
-def get_data():
-    return jsonify(parking_data)
 
 # prediction API
 @app.route("/prediction")
