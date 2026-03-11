@@ -2,14 +2,13 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import joblib
 from datetime import datetime
-import os
 
 app = Flask(__name__)
 CORS(app)
 
 # Load ML model
 model = joblib.load("parking_model.pkl")
-
+reservations = []
 # store latest parking data from ESP32
 parking_data = {
     "distance1": 0,
@@ -17,6 +16,37 @@ parking_data = {
     "status1": "FREE",
     "status2": "FREE"
 }
+@app.route("/reserve", methods=["POST"])
+def reserve_slot():
+
+    data = request.json
+
+    reservation = {
+        "slot": data["slot"],
+        "start": data["start"],
+        "end": data["end"],
+        "price": data["price"]
+    }
+
+    reservations.append(reservation)
+
+    return {"message":"slot reserved"}
+
+def remove_expired_reservations():
+
+    now = datetime.now().strftime("%H:%M")
+
+    global reservations
+
+    reservations = [
+        r for r in reservations
+        if r["end"] > now
+    ]
+
+@app.route("/reservations")
+def get_reservations():
+    remove_expired_reservations()
+    return jsonify(reservations)
 
 # ESP32 sends data here
 @app.route("/update", methods=["POST"])
@@ -24,6 +54,11 @@ def update_data():
     global parking_data
     parking_data = request.json
     return {"message": "data updated"}
+
+# dashboard reads parking data
+@app.route("/data")
+def get_data():
+    return jsonify(parking_data)
 parking_data = {
     "distance1": 0,
     "distance2": 0,
@@ -37,10 +72,6 @@ def update_data():
     parking_data = request.json
     return {"message": "updated"}
 
-@app.route("/data")
-def get_data():
-    return jsonify(parking_data)
-# dashboard reads parking data
 @app.route("/data")
 def get_data():
     return jsonify(parking_data)
@@ -63,9 +94,5 @@ def get_prediction():
         "predicted_free_spaces": free_spaces
     })
 
-
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-
+    app.run()
