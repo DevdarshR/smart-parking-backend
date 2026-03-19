@@ -28,8 +28,13 @@ parking_data = {
 def reserve_slot():
     data = request.json
     slot = int(data["slot"])
-    start = data["start"]
-    end = data["end"]
+    start = data.get("start")
+    end = data.get("end")
+    
+    # 1. Grab the dynamic price and payment method sent from the frontend!
+    # (We use .get() with fallbacks just in case)
+    calculated_price = data.get("price", 0) 
+    pay_method = data.get("payment_method", "UPI")
 
     # check double booking
     for r in reservations:
@@ -40,14 +45,13 @@ def reserve_slot():
         "slot": slot,
         "start": start,
         "end": end,
-        "price": 20,
+        "price": calculated_price,    # 2. Use the dynamic price here instead of 20
+        "payment_method": pay_method, # 3. Save the payment method (Cash/UPI)
         "status": "ACTIVE"
     }
 
     reservations.append(reservation)
     return jsonify({"message": "Reservation successful"}), 200
-
-
 # --- NEW ENDPOINT: Manual Deletion ---
 @app.route("/delete_reservation", methods=["POST"])
 def delete_reservation():
