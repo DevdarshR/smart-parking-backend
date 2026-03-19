@@ -31,10 +31,12 @@ def reserve_slot():
     start = data.get("start")
     end = data.get("end")
     
-    # 1. Grab the dynamic price and payment method sent from the frontend!
-    # (We use .get() with fallbacks just in case)
     calculated_price = data.get("price", 0) 
     pay_method = data.get("payment_method", "UPI")
+    
+    # NEW: Grab the vehicle number and booking ID
+    vehicle_no = data.get("vehicle_no", "UNKNOWN")
+    booking_id = data.get("booking_id", "LX-00000")
 
     # check double booking
     for r in reservations:
@@ -42,11 +44,13 @@ def reserve_slot():
             return jsonify({"message": "Slot already reserved for this time"}), 400
 
     reservation = {
+        "booking_id": booking_id, # Save the ID
+        "vehicle_no": vehicle_no, # Save the Plate
         "slot": slot,
         "start": start,
         "end": end,
-        "price": calculated_price,    # 2. Use the dynamic price here instead of 20
-        "payment_method": pay_method, # 3. Save the payment method (Cash/UPI)
+        "price": calculated_price,
+        "payment_method": pay_method,
         "status": "ACTIVE"
     }
 
