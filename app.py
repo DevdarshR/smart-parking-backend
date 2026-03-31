@@ -24,6 +24,11 @@ parking_data = {
     "status2": "FREE"
 }
 
+# Helper function to convert "HH:MM" into total minutes for easy math
+def time_to_mins(t_str):
+    h, m = map(int, t_str.split(':'))
+    return h * 60 + m
+
 @app.route("/reserve", methods=["POST"])
 def reserve_slot():
     data = request.json
@@ -33,19 +38,29 @@ def reserve_slot():
     
     calculated_price = data.get("price", 0) 
     pay_method = data.get("payment_method", "UPI")
-    
-    # NEW: Grab the vehicle number and booking ID
     vehicle_no = data.get("vehicle_no", "UNKNOWN")
     booking_id = data.get("booking_id", "LX-00000")
+    
+    # NEW: Grab the username of the person booking
+    username = data.get("username", "guest")
 
-    # check double booking
+    new_start_mins = time_to_mins(start)
+    new_end_mins = time_to_mins(end)
+
+    # NEW: Strict Overlap Check
     for r in reservations:
-        if r["slot"] == slot and r["start"] == start:
-            return jsonify({"message": "Slot already reserved for this time"}), 400
+        if r["slot"] == slot:
+            ex_start = time_to_mins(r["start"])
+            ex_end = time_to_mins(r["end"])
+            
+            # Logic: If New Start is before Existing End AND New End is after Existing Start -> OVERLAP!
+            if new_start_mins < ex_end and new_end_mins > ex_start:
+                return jsonify({"message": f"Slot {slot} is already booked during this time."}), 400
 
     reservation = {
-        "booking_id": booking_id, # Save the ID
-        "vehicle_no": vehicle_no, # Save the Plate
+        "username": username, # Save the owner
+        "booking_id": booking_id, 
+        "vehicle_no": vehicle_no, 
         "slot": slot,
         "start": start,
         "end": end,
@@ -56,6 +71,7 @@ def reserve_slot():
 
     reservations.append(reservation)
     return jsonify({"message": "Reservation successful"}), 200
+    
 # --- NEW ENDPOINT: Manual Deletion ---
 @app.route("/delete_reservation", methods=["POST"])
 def delete_reservation():
